@@ -120,6 +120,7 @@ STAAR <- function(genotype,obj_nullmodel,annotation_phred=NULL,
     w_1 <- dbeta(MAF,1,25)
     ## beta(1,1)
     w_2 <- dbeta(MAF,1,1)
+
     if(dim(annotation_phred)[2] == 0){
       ## Burden, SKAT, ACAT-V
       w_B <- w_S <- as.matrix(cbind(w_1,w_2))
@@ -132,6 +133,7 @@ STAAR <- function(genotype,obj_nullmodel,annotation_phred=NULL,
       #### weights
       B = 100
       K = 100
+
       weights<-abs(rnorm(p*B))
       dim(weights)<-c(p,B)
       weights2<-abs(rnorm(p*K))
@@ -139,36 +141,66 @@ STAAR <- function(genotype,obj_nullmodel,annotation_phred=NULL,
 
       ## Burden
       w_B_1 <- annotation_rank*w_1 
-      w_B_1 = do.call(cbind, lapply(1:K, function(jj) t(t(w_B_1) %*% diag(weights[,jj]))))
       w_B_1 <- cbind(w_1,w_B_1)
+      w_B_1 = do.call(cbind, lapply(1:ncol(w_B_1), function(jj) {
+        set.seed(jj)
+        weights = abs(rnorm(p*B))
+        dim(weights) = c(p, B)
+        diag(w_B_1[,jj]) %*% weights
+        }))
 
       w_B_2 <- annotation_rank*w_2
-      w_B_2 = do.call(cbind, lapply(1:K, function(jj) t(t(w_B_2) %*% diag(weights2[,jj]))))
       w_B_2 <- cbind(w_2,w_B_2)
+      w_B_2 = do.call(cbind, lapply(1:ncol(w_B_2), function(jj) {
+        set.seed(jj)
+        weights = abs(rnorm(p*B))
+        dim(weights) = c(p, B)
+        diag(w_B_2[,jj]) %*% weights
+        }))
 
       w_B <- cbind(w_B_1,w_B_2)
       w_B <- as.matrix(w_B)
 
       ## SKAT
       w_S_1 <- sqrt(annotation_rank)*w_1
-      w_S_1 = do.call(cbind, lapply(1:K, function(jj) t(t(w_S_1) %*% diag(weights[,jj]))))
       w_S_1 <- cbind(w_1,w_S_1)
+      w_S_1 = do.call(cbind, lapply(1:ncol(w_S_1), function(jj) {
+        set.seed(jj)
+        weights = abs(rnorm(p*B))
+        dim(weights) = c(p, B)
+        diag(w_S_1[,jj]) %*% weights
+        }))
 
       w_S_2 <- sqrt(annotation_rank)*w_2
-      w_S_2 = do.call(cbind, lapply(1:K, function(jj) t(t(w_S_2) %*% diag(weights[,jj]))))
       w_S_2 <- cbind(w_2,w_S_2)
+      w_S_2 = do.call(cbind, lapply(1:ncol(w_S_2), function(jj) {
+        set.seed(jj)
+        weights = abs(rnorm(p*B))
+        dim(weights) = c(p, B)
+        diag(w_S_2[,jj]) %*% weights
+        }))
 
       w_S <- cbind(w_S_1,w_S_2)
       w_S <- as.matrix(w_S)
 
       ## ACAT-V
       w_A_1 <- annotation_rank*w_1^2/dbeta(MAF,0.5,0.5)^2
-      w_A_1 = do.call(cbind, lapply(1:K, function(jj) t(t(w_A_1) %*% diag(weights[,jj]))))
       w_A_1 <- cbind(w_1^2/dbeta(MAF,0.5,0.5)^2,w_A_1)
+      w_A_1 = do.call(cbind, lapply(1:ncol(w_A_1), function(jj) {
+        set.seed(jj)
+        weights = abs(rnorm(p*B))
+        dim(weights) = c(p, B)
+        diag(w_A_1[,jj]) %*% weights
+        }))
 
       w_A_2 <- annotation_rank*w_2^2/dbeta(MAF,0.5,0.5)^2
-      w_A_2 = do.call(cbind, lapply(1:K, function(jj) t(t(w_A_2) %*% diag(weights[,jj]))))
       w_A_2 <- cbind(w_2^2/dbeta(MAF,0.5,0.5)^2,w_A_2)
+      w_A_2 = do.call(cbind, lapply(1:ncol(w_A_2), function(jj) {
+        set.seed(jj)
+        weights = abs(rnorm(p*B))
+        dim(weights) = c(p, B)
+        diag(w_A_2[,jj]) %*% weights
+        }))
 
       w_A <- cbind(w_A_1,w_A_2)
       w_A <- as.matrix(w_A)
@@ -216,14 +248,22 @@ STAAR <- function(genotype,obj_nullmodel,annotation_phred=NULL,
                          mac=as.integer(round(MAF*2*dim(G)[1])))
     }
 
-    length(pvalues)
+    # length(pvalues)
     num_variant <- sum(RV_label) #dim(G)[2]
     cMAC <- sum(G)
     num_annotation <- dim(annotation_phred)[2]+1
-    step = 1 + (num_annotation-1)*K
+    step = num_annotation*K
 
     results_STAAR_O <- CCT(pvalues)
-    results_ACAT_O <- CCT(pvalues[c(1,step+1,2*step+1,3*step+1,4*step+1,5*step+1)])
+    # results_ACAT_O <- CCT(pvalues[c(1,step+1,2*step+1,3*step+1,4*step+1,5*step+1)])
+    results_ACAT_O <- CCT(pvalues[c(
+      1:K,
+      (step+1):(step+K),
+      (2*step+1):(2*step+K),
+      (3*step+1):(3*step+K),
+      (4*step+1):(4*step+K),
+      (5*step+1):(5*step+K))
+      ])
 
     pvalues_STAAR_S_1_25 <- CCT(pvalues[1:step])
     pvalues_STAAR_S_1_1 <- CCT(pvalues[(step+1):(2*step)])
@@ -258,22 +298,22 @@ STAAR <- function(genotype,obj_nullmodel,annotation_phred=NULL,
       colnames(results_STAAR_A_1_25) <- c("ACAT-V(1,25)","STAAR-A(1,25)")
       colnames(results_STAAR_A_1_1) <- c("ACAT-V(1,1)","STAAR-A(1,1)")
     }else{
-      colnames(results_STAAR_S_1_25) <- c("SKAT(1,25)",
+      colnames(results_STAAR_S_1_25) <- c(do.call(paste0, expand.grid("SKAT(1,25)", "_", 1:K)),
                                           paste0("SKAT(1,25)-",do.call(paste0, expand.grid(colnames(annotation_phred), "_", 1:K))),
                                           "STAAR-S(1,25)")
-      colnames(results_STAAR_S_1_1) <- c("SKAT(1,1)",
+      colnames(results_STAAR_S_1_1) <- c(do.call(paste0, expand.grid("SKAT(1,1)", "_", 1:K)),
                                          paste0("SKAT(1,1)-",do.call(paste0, expand.grid(colnames(annotation_phred), "_", 1:K))),
                                          "STAAR-S(1,1)")
-      colnames(results_STAAR_B_1_25) <- c("Burden(1,25)",
+      colnames(results_STAAR_B_1_25) <- c(do.call(paste0, expand.grid("Burden(1,25)", "_", 1:K)),
                                           paste0("Burden(1,25)-",do.call(paste0, expand.grid(colnames(annotation_phred), "_", 1:K))),
                                           "STAAR-B(1,25)")
-      colnames(results_STAAR_B_1_1) <- c("Burden(1,1)",
+      colnames(results_STAAR_B_1_1) <- c(do.call(paste0, expand.grid("Burden(1,1)", "_", 1:K)),
                                          paste0("Burden(1,1)-",do.call(paste0, expand.grid(colnames(annotation_phred), "_", 1:K))),
                                          "STAAR-B(1,1)")
-      colnames(results_STAAR_A_1_25) <- c("ACAT-V(1,25)",
+      colnames(results_STAAR_A_1_25) <- c(do.call(paste0, expand.grid("ACAT-V(1,25)", "_", 1:K)),
                                           paste0("ACAT-V(1,25)-",do.call(paste0, expand.grid(colnames(annotation_phred), "_", 1:K))),
                                           "STAAR-A(1,25)")
-      colnames(results_STAAR_A_1_1) <- c("ACAT-V(1,1)",
+      colnames(results_STAAR_A_1_1) <- c(do.call(paste0, expand.grid("ACAT-V(1,1)", "_", 1:K)),
                                          paste0("ACAT-V(1,1)-",do.call(paste0, expand.grid(colnames(annotation_phred), "_", 1:K))),
                                          "STAAR-A(1,1)")
     }
